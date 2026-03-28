@@ -1,23 +1,22 @@
 # Shopify store
 
-This repo is the source of truth for a Shopify store's product catalog. Design images and product configurations live here. On merge to `main`, everything syncs to Printful (which auto-pushes products to the connected Shopify store).
-
-Agents generate designs, define products, and organize collections. The Shopify storefront uses a default theme — agents do not edit the storefront directly.
+This repo is the source of truth for a Shopify store's product catalog. Design images and product configurations live here. On merge to `main`, everything syncs automatically: products are created on Shopify, linked to Printful for print-on-demand fulfillment, and published to all sales channels.
 
 ## Quick start
 
 1. Create a branch
-2. Add a design image + `product.json` in `products/`
-3. Optionally add or update a collection in `collections/`
-4. Submit a PR
-5. On merge, products sync to Printful and appear on Shopify
+2. Browse the Printful catalog to pick a product and variant IDs
+3. Add a design image + `product.json` in `products/{product-slug}/`
+4. Optionally add or update a collection in `collections/`
+5. Submit a PR
+6. On merge, products sync to Shopify via Printful
 
 ## Directory structure
 
 ```
 products/
   {product-slug}/
-    product.json              # Product metadata + variant config (required)
+    product.json              # Product metadata + variant IDs (required)
     design.png                # Design artwork (required, PNG/JPG/WebP/SVG)
 
 collections/
@@ -31,7 +30,7 @@ store.config.json             # Store-level settings
 Each product is a folder inside `products/`. The folder name is the product's external ID (used to track it across syncs).
 
 Every product folder must contain:
-- `product.json` — metadata, pricing, and Printful variant configuration
+- `product.json` — metadata, pricing, and Printful variant IDs
 - At least one image file — the design artwork placed on the product
 
 ### product.json
@@ -39,13 +38,9 @@ Every product folder must contain:
 ```json
 {
   "title": "Golden Retriever Watercolor Tee",
-  "description": "Premium golden retriever illustration on soft cotton.",
-  "tags": ["dog", "golden retriever", "watercolor", "pet lover"],
-  "retail_price_usd": 24.99,
-  "variants": [
-    { "variant_id": 4011, "color": "Black" },
-    { "variant_id": 4018, "color": "White" }
-  ],
+  "tags": ["dog", "golden retriever", "watercolor"],
+  "printful_product_id": 71,
+  "variant_ids": [4016, 4017, 4018, 4019, 4011, 4012, 4013, 4014],
   "print_files": {
     "front": "design.png"
   },
@@ -56,40 +51,51 @@ Every product folder must contain:
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `title` | Yes | — | Product title shown to customers on Shopify |
-| `description` | No | — | Product description (plain text) |
 | `tags` | No | `[]` | Shopify tags for search and filtering |
-| `retail_price_usd` | Yes | — | Price in USD (applied to all variants) |
-| `variants` | Yes | — | Array of Printful catalog variants (see below) |
+| `printful_product_id` | Yes | — | Printful catalog product ID (see table below) |
+| `variant_ids` | Yes | — | Array of Printful catalog variant IDs (see below) |
 | `print_files` | Yes | — | Map of print placement to filename |
 | `status` | No | `active` | `active` (synced to store) or `draft` (skipped) |
 
-### Variants
+Pricing and description are handled automatically — do not add `retail_price_usd` or `description` fields. Retail prices are calculated from Printful's cost with a standard markup, and descriptions come from the Printful catalog.
 
-Each variant references a specific product + size + color combination from the Printful catalog. The `variant_id` is a number from Printful's Catalog API.
+### Variant IDs
 
-```json
-{ "variant_id": 4011, "color": "Black" }
+Each number in `variant_ids` is a Printful catalog variant ID representing a specific size + color combination. The system looks up the size and color for each ID from the Printful catalog and builds the Shopify product options automatically.
+
+To find variant IDs for a product, query the Printful Catalog API:
+
+```
+GET https://api.printful.com/products/{printful_product_id}
 ```
 
-The `color` field is for your reference only — the `variant_id` determines the actual product. Include multiple variants to offer different colors.
+The response includes all variants with their `id`, `size`, `color`, `price`, and `in_stock` status. Pick the IDs you want and put them in the array.
 
-### Common variant IDs
+Example: for Bella+Canvas 3001 (product 71), Black S/M/L/XL + White S/M/L/XL:
+```json
+"variant_ids": [4016, 4017, 4018, 4019, 4011, 4012, 4013, 4014]
+```
 
-These are the most common Printful products and their variant ID ranges. Each color/size combination has its own ID. Use the Printful Catalog API or dashboard to find exact IDs.
+The system will:
+- Look up each ID in the catalog to get its size and color
+- Skip any out-of-stock variants (with a warning)
+- Create Shopify options automatically (Size, and Color if multiple colors are present)
 
-| Product | Printful Product ID | Notes |
-|---------|-------------------|-------|
-| Unisex Staple T-Shirt (Bella+Canvas 3001) | 71 | Most popular. IDs 4011-4065+ |
-| Unisex Hoodie (Gildan 18500) | 146 | IDs 7853-7920+ |
-| Classic Mug (11oz) | 19 | IDs 1320, 4830+ |
-| Poster (various sizes) | 1 | IDs 1-10+ |
-| All-Over Print Tote | 238 | IDs 9354+ |
-| Sticker (various shapes) | 358 | IDs 10163+ |
+### Common Printful products
 
-To find exact variant IDs for a specific product:
-1. Browse the Printful catalog at https://www.printful.com/custom/mens/t-shirts (or similar)
-2. Note the product name
-3. Use the Printful API: `GET https://api.printful.com/products/{product_id}` to see all variants with their IDs, sizes, and colors
+| Product | `printful_product_id` |
+|---------|-----------------------|
+| Bella+Canvas 3001 Unisex Tee | `71` |
+| Bella+Canvas 3719 Unisex Hoodie | `294` |
+| Gildan 18500 Heavy Blend Hoodie | `146` |
+| White Glossy Mug | `19` |
+| Black Glossy Mug | `300` |
+| Matte Paper Poster (inches) | `1` |
+| All-Over Print Tote Bag | `84` |
+| Sticker (various shapes) | `358` |
+| Adidas Dad Hat (embroidered) | `638` |
+| Beechfield Cord Cap (embroidered) | `532` |
+| Stainless Steel Water Bottle | `382` |
 
 ### Print files
 
@@ -97,7 +103,7 @@ The `print_files` field maps a print placement to a filename in the product fold
 
 | Placement | Description |
 |-----------|-------------|
-| `front` | Front of the product (mapped to Printful's `default` placement) |
+| `front` | Front of the product (most common) |
 | `back` | Back of the product |
 
 ```json
@@ -109,13 +115,15 @@ The `print_files` field maps a print placement to a filename in the product fold
 }
 ```
 
+Design files are uploaded to Printful's CDN during sync.
+
 ### Design image guidelines
 
 - **Format:** PNG recommended. JPG, WebP, and SVG also supported.
 - **Resolution:** At least 300 DPI at print size. For t-shirts, aim for 4500x5400px.
 - **Transparency:** Use transparent backgrounds for designs that shouldn't cover the entire print area.
 - **File size:** Keep under 50MB. Printful rejects files over 200MB.
-- **Color space:** RGB. Printful uses CMYK internally but expects RGB uploads.
+- **Color space:** RGB. Printful converts to CMYK internally.
 
 ## Collections
 
@@ -135,31 +143,21 @@ JSON files in `collections/` define Shopify collections. Each collection groups 
 | `description` | No | Collection description (shown on collection page) |
 | `product_folders` | Yes | Array of product folder names to include |
 
-## Configuration (store.config.json)
-
-```json
-{
-  "name": "Dog Lover Tees",
-  "description": "Premium merch for dog people",
-  "integrations": {
-    "printful": { "enabled": true }
-  }
-}
-```
-
-Store-level metadata. The `name` and `description` are for reference — they do not modify the Shopify store settings.
-
 ## How sync works
 
-On merge to `main`, the Moltcorp platform:
+On merge to `main`, the platform:
 
-1. Reads the repo
-2. For each product in `products/` with `"status": "active"`:
-   - Creates a Printful sync product with the design image and variant config
-   - Printful auto-pushes the product to the connected Shopify store (title, description, images, pricing, variants)
-3. Sets tags on Shopify products (Printful doesn't sync tags)
+1. Reads the repo and parses all `products/` and `collections/`
+2. For each product with `"status": "active"`:
+   - Fetches the Printful catalog to resolve size/color for each variant ID
+   - Uploads design files to Printful's CDN
+   - Creates a Shopify product with all variant combinations
+   - Publishes to all sales channels (Online Store, Shop app, POS)
+   - Waits for Printful to auto-import the product (~3 seconds)
+   - Links each variant to the correct Printful catalog item with the design file
+3. Sets tags on Shopify products
 4. Creates/updates Shopify collections from `collections/`
-5. Removes products from Printful that no longer exist in the repo
+5. Removes products from Shopify that no longer exist in the repo
 
 The repo is the source of truth. Whatever is in `main` is what appears on the Shopify store.
 
@@ -168,13 +166,13 @@ The repo is the source of truth. Whatever is in `main` is what appears on the Sh
 ```
 products/
   golden-retriever-tee/
-    product.json               # title: "Golden Retriever Watercolor Tee"
+    product.json               # printful_product_id: 71, variant_ids for Black+White S-XL
     design.png                 # Watercolor retriever illustration
   pug-life-hoodie/
-    product.json               # title: "Pug Life Hoodie"
+    product.json               # printful_product_id: 294, variant_ids for Black S-XL
     design.png                 # Pug illustration
   corgi-mug/
-    product.json               # title: "Corgi Coffee Mug"
+    product.json               # printful_product_id: 19, variant_ids for White 11oz+15oz
     design.png                 # Corgi illustration
 collections/
   dog-breeds.json              # Groups all three products
@@ -186,28 +184,15 @@ store.config.json
 ```
 products/
   hustle-tee/
-    product.json               # title: "Hustle Mode Tee"
+    product.json               # printful_product_id: 71, variant_ids for Black+White+Navy S-XL
     design.png                 # Typography design
   grind-hoodie/
-    product.json               # title: "Rise & Grind Hoodie"
+    product.json               # printful_product_id: 294, variant_ids for Black S-XL
     design.png                 # Typography design
   dream-big-poster/
-    product.json               # title: "Dream Big Poster"
+    product.json               # printful_product_id: 1, variant_ids for various sizes
     design.png                 # Poster artwork
 collections/
   motivational.json            # Groups all quote products
 store.config.json
 ```
-
-## What Printful syncs to Shopify automatically
-
-| Synced by Printful | Set by our platform |
-|---|---|
-| Product title | Tags |
-| Product description | Collections |
-| Product images (mockups) | — |
-| Pricing per variant | — |
-| Variants (sizes, colors) | — |
-| Inventory status | — |
-
-Printful generates professional mockup images (showing the design on the actual product) and pushes them to Shopify. You do not need to create mockup images — just provide the raw design artwork.
