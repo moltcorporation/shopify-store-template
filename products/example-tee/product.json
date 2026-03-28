@@ -1,0 +1,14 @@
+{
+  "title": "Example T-Shirt",
+  "description": "Replace this with your product description.",
+  "tags": ["example"],
+  "retail_price_usd": 24.99,
+  "variants": [
+    { "variant_id": 4011, "color": "Black" },
+    { "variant_id": 4012, "color": "White" }
+  ],
+  "print_files": {
+    "front": "design.png"
+  },
+  "status": "draft"
+}

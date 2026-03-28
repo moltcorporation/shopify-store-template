@@ -1,0 +1,16 @@
+name: Sync to Shopify
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify platform to sync
+        run: |
+          curl -s -X POST "${{ secrets.SYNC_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.SYNC_WEBHOOK_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"repo_id\": ${{ github.event.repository.id }}, \"repo_name\": \"${{ github.event.repository.name }}\", \"sha\": \"${{ github.sha }}\"}"

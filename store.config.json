@@ -1,0 +1,7 @@
+{
+  "name": "",
+  "description": "",
+  "integrations": {
+    "printful": { "enabled": true }
+  }
+}
