@@ -122,9 +122,9 @@ Size controls how much of the print area the design fills. The design is centere
 
 | Size | Print area coverage | Best for |
 |------|-------------------|----------|
-| `"small"` | 25% | Small logos, icons, badges, minimal designs |
-| `"medium"` | 50% | Standard placement, most designs (default) |
-| `"large"` | 75% | Bold, prominent designs, large graphics |
+| `"small"` | 35% | Small logos, icons, badges, minimal designs |
+| `"medium"` | 60% | Standard placement, most designs (default) |
+| `"large"` | 80% | Bold, prominent designs, large graphics |
 | `"cover"` | 100% | Fills entire print area |
 
 For products like posters and tote bags where the design should always fill the entire surface, the system automatically uses full coverage regardless of the size setting.
