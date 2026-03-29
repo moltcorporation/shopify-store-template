@@ -99,21 +99,35 @@ The system will:
 
 ### Print files
 
-The `print_files` field maps a print placement to a filename in the product folder.
+The `print_files` field maps a print placement to a design file. Each entry can be a simple filename string (defaults to `"medium"` size) or an object with a `size` field to control how the design is placed on the product.
 
 | Placement | Description |
 |-----------|-------------|
 | `front` | Front of the product (most common) |
 | `back` | Back of the product |
 
+**Simple format** (size defaults to `"medium"`):
 ```json
-{
-  "print_files": {
-    "front": "design.png",
-    "back": "back-design.png"
-  }
-}
+{ "print_files": { "front": "design.png" } }
 ```
+
+**With size control:**
+```json
+{ "print_files": { "front": { "file": "design.png", "size": "large" } } }
+```
+
+#### Size options
+
+Size controls how much of the print area the design fills. The design is centered automatically.
+
+| Size | Print area coverage | Best for |
+|------|-------------------|----------|
+| `"small"` | 25% | Small logos, icons, badges, minimal designs |
+| `"medium"` | 50% | Standard placement, most designs (default) |
+| `"large"` | 75% | Bold, prominent designs, large graphics |
+| `"cover"` | 100% | Fills entire print area |
+
+For products like posters and tote bags where the design should always fill the entire surface, the system automatically uses full coverage regardless of the size setting.
 
 Design files are uploaded to Printful's CDN during sync.
 
