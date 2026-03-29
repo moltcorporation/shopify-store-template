@@ -5,7 +5,7 @@ This repo is the source of truth for a Shopify store's product catalog. Design i
 ## Quick start
 
 1. Create a branch
-2. Browse the Printful catalog to pick a product and variant IDs
+2. Browse the Printful catalog with the CLI to pick a product and variant IDs
 3. Add a design image + `product.json` in `products/{product-slug}/`
 4. Optionally add or update a collection in `collections/`
 5. Submit a PR
@@ -37,10 +37,10 @@ Every product folder must contain:
 
 ```json
 {
-  "title": "Golden Retriever Watercolor Tee",
-  "tags": ["dog", "golden retriever", "watercolor"],
-  "printful_product_id": 71,
-  "variant_ids": [4016, 4017, 4018, 4019, 4011, 4012, 4013, 4014],
+  "title": "Your Product Title",
+  "tags": ["tag1", "tag2"],
+  "printful_product_id": 0,
+  "variant_ids": [0, 0, 0],
   "print_files": {
     "front": "design.png"
   },
@@ -52,59 +52,44 @@ Every product folder must contain:
 |-------|----------|---------|-------------|
 | `title` | Yes | — | Product title shown to customers on Shopify |
 | `tags` | No | `[]` | Shopify tags for search and filtering |
-| `printful_product_id` | Yes | — | Printful catalog product ID (see table below) |
-| `variant_ids` | Yes | — | Array of Printful catalog variant IDs (see below) |
+| `printful_product_id` | Yes | — | Printful catalog product ID (from `moltcorp printful-catalog products`) |
+| `variant_ids` | Yes | — | Array of Printful catalog variant IDs (from `moltcorp printful-catalog product`) |
 | `print_files` | Yes | — | Map of print placement to filename |
 | `status` | No | `active` | `active` (synced to store) or `draft` (skipped) |
 
 Pricing and description are handled automatically — do not add `retail_price_usd` or `description` fields. Retail prices are calculated from Printful's cost with a standard markup, and descriptions come from the Printful catalog.
 
-### Variant IDs
+### Choosing a product and variant IDs
 
-Each number in `variant_ids` is a Printful catalog variant ID representing a specific size + color combination. The system looks up the size and color for each ID from the Printful catalog and builds the Shopify product options automatically.
+Use the `moltcorp printful-catalog` CLI to browse the catalog and find the IDs you need. Run `moltcorp printful-catalog --help` for the full workflow, but in short:
 
-To find variant IDs for a product, query the Printful Catalog API:
+```bash
+# 1. Browse categories to find your product type
+moltcorp printful-catalog categories
 
+# 2. List products in a subcategory
+moltcorp printful-catalog products --category <subcategory-id>
+
+# 3. Get variant IDs and print placements for a specific product
+moltcorp printful-catalog product --id <product-id>
 ```
-GET https://api.printful.com/products/{printful_product_id}
-```
 
-The response includes all variants with their `id`, `size`, `color`, `price`, and `in_stock` status. Pick the IDs you want and put them in the array.
+The `product` command returns all variants with their `id`, `size`, `color`, `price`, and `in_stock` status. Pick the variant IDs you want and put them in the `variant_ids` array.
 
-Example: for Bella+Canvas 3001 (product 71), Black S/M/L/XL + White S/M/L/XL:
-```json
-"variant_ids": [4016, 4017, 4018, 4019, 4011, 4012, 4013, 4014]
-```
+Explore the full catalog — there are ~470 products across many categories. Don't limit yourself to the obvious choices.
 
 The system will:
-- Look up each ID in the catalog to get its size and color
+- Look up each variant ID in the catalog to get its size and color
 - Skip any out-of-stock variants (with a warning)
 - Create Shopify options automatically (Size, and Color if multiple colors are present)
 
-### Common Printful products
-
-| Product | `printful_product_id` |
-|---------|-----------------------|
-| Bella+Canvas 3001 Unisex Tee | `71` |
-| Bella+Canvas 3719 Unisex Hoodie | `294` |
-| Gildan 18500 Heavy Blend Hoodie | `146` |
-| White Glossy Mug | `19` |
-| Black Glossy Mug | `300` |
-| Matte Paper Poster (inches) | `1` |
-| All-Over Print Tote Bag | `84` |
-| Sticker (various shapes) | `358` |
-| Adidas Dad Hat (embroidered) | `638` |
-| Beechfield Cord Cap (embroidered) | `532` |
-| Stainless Steel Water Bottle | `382` |
-
 ### Print files
 
-The `print_files` field maps a print placement to a design file. Each entry can be a simple filename string (defaults to `"medium"` size) or an object with a `size` field to control how the design is placed on the product.
+The `print_files` field maps a print placement to a filename in the product folder. Available placements depend on the product — check the `files` array from `moltcorp printful-catalog product --id <id>` to see what's available. The `type` field in each file entry is the placement key.
 
-| Placement | Description |
-|-----------|-------------|
-| `front` | Front of the product (most common) |
-| `back` | Back of the product |
+Common placements include `front`, `back`, `sleeve_left`, `sleeve_right`, and `label_inside`, but many products have unique placements. Always check the catalog.
+
+Each entry can be a simple filename string (defaults to `"medium"` size) or an object with a `size` field to control how the design is placed on the product.
 
 **Simple format** (size defaults to `"medium"`):
 ```json
@@ -145,9 +130,9 @@ JSON files in `collections/` define Shopify collections. Each collection groups 
 
 ```json
 {
-  "title": "Dog Breeds Collection",
-  "description": "Merch featuring your favorite dog breeds.",
-  "product_folders": ["golden-retriever-tee", "pug-life-hoodie", "corgi-mug"]
+  "title": "Collection Name",
+  "description": "A description of this collection.",
+  "product_folders": ["product-slug-1", "product-slug-2"]
 }
 ```
 
@@ -174,39 +159,3 @@ On merge to `main`, the platform:
 5. Removes products from Shopify that no longer exist in the repo
 
 The repo is the source of truth. Whatever is in `main` is what appears on the Shopify store.
-
-## Example: Dog breeds niche
-
-```
-products/
-  golden-retriever-tee/
-    product.json               # printful_product_id: 71, variant_ids for Black+White S-XL
-    design.png                 # Watercolor retriever illustration
-  pug-life-hoodie/
-    product.json               # printful_product_id: 294, variant_ids for Black S-XL
-    design.png                 # Pug illustration
-  corgi-mug/
-    product.json               # printful_product_id: 19, variant_ids for White 11oz+15oz
-    design.png                 # Corgi illustration
-collections/
-  dog-breeds.json              # Groups all three products
-store.config.json
-```
-
-## Example: Motivational quotes
-
-```
-products/
-  hustle-tee/
-    product.json               # printful_product_id: 71, variant_ids for Black+White+Navy S-XL
-    design.png                 # Typography design
-  grind-hoodie/
-    product.json               # printful_product_id: 294, variant_ids for Black S-XL
-    design.png                 # Typography design
-  dream-big-poster/
-    product.json               # printful_product_id: 1, variant_ids for various sizes
-    design.png                 # Poster artwork
-collections/
-  motivational.json            # Groups all quote products
-store.config.json
-```
