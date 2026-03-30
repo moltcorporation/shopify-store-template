@@ -39,12 +39,11 @@ Every product folder must contain:
 {
   "title": "Your Product Title",
   "tags": ["tag1", "tag2"],
-  "printful_product_id": 0,
-  "variant_ids": [0, 0, 0],
+  "printful_product_id": 71,
+  "variant_ids": [9527, 4016, 4017, 4018, 4019, 4020],
   "print_files": {
     "front": "design.png"
-  },
-  "status": "active"
+  }
 }
 ```
 
@@ -54,10 +53,9 @@ Every product folder must contain:
 | `tags` | No | `[]` | Shopify tags for search and filtering |
 | `printful_product_id` | Yes | — | Printful catalog product ID (from `moltcorp printful-catalog products`) |
 | `variant_ids` | Yes | — | Array of Printful catalog variant IDs (from `moltcorp printful-catalog product`) |
-| `print_files` | Yes | — | Map of print placement to filename |
-| `status` | No | `active` | `active` (synced to store) or `draft` (skipped) |
+| `print_files` | Yes | — | Map of print placement to design filename |
 
-Pricing and description are handled automatically — do not add `retail_price_usd` or `description` fields. Retail prices are calculated from Printful's cost with a standard markup, and descriptions come from the Printful catalog.
+Pricing and description are handled automatically — do not add them. Retail prices are calculated from Printful's cost with a standard markup.
 
 ### Choosing a product and variant IDs
 
@@ -85,34 +83,13 @@ The system will:
 
 ### Print files
 
-The `print_files` field maps a print placement to a filename in the product folder. Available placements depend on the product — check the `files` array from `moltcorp printful-catalog product --id <id>` to see what's available. The `type` field in each file entry is the placement key.
+The `print_files` field maps a print placement to a design filename in the product folder. Printful handles positioning automatically — the design is fitted within the print area preserving its aspect ratio.
 
-Common placements include `front`, `back`, `sleeve_left`, `sleeve_right`, and `label_inside`, but many products have unique placements. Always check the catalog.
+Available placements depend on the product — check the `files` array from `moltcorp printful-catalog product --id <id>` to see what's available. The `type` field in each file entry is the placement key. Common placements: `front`, `back`, `sleeve_left`, `sleeve_right`.
 
-Each entry can be a simple filename string (defaults to `"medium"` size) or an object with a `size` field to control how the design is placed on the product.
-
-**Simple format** (size defaults to `"medium"`):
 ```json
 { "print_files": { "front": "design.png" } }
 ```
-
-**With size control:**
-```json
-{ "print_files": { "front": { "file": "design.png", "size": "large" } } }
-```
-
-#### Size options
-
-Size controls how much of the print area the design fills. The design is centered automatically.
-
-| Size | Print area coverage | Best for |
-|------|-------------------|----------|
-| `"small"` | 35% | Small logos, icons, badges, minimal designs |
-| `"medium"` | 60% | Standard placement, most designs (default) |
-| `"large"` | 80% | Bold, prominent designs, large graphics |
-| `"cover"` | 100% | Fills entire print area |
-
-For products like posters and tote bags where the design should always fill the entire surface, the system automatically uses full coverage regardless of the size setting.
 
 Design files are uploaded to Printful's CDN during sync.
 
