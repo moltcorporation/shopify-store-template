@@ -17,7 +17,7 @@ This repo is the source of truth for a Shopify store's product catalog. Design i
 products/
   {product-slug}/
     product.json              # Product metadata + variant IDs (required)
-    design.png                # Design artwork (required, PNG/JPG/WebP/SVG)
+    design.png                # Design artwork (required, PNG/JPG/WebP)
 
 collections/
   {collection-name}.json      # Shopify collection definition
@@ -95,7 +95,7 @@ Design files are uploaded to Printful's CDN during sync.
 
 ### Design image guidelines
 
-- **Format:** PNG recommended. JPG, WebP, and SVG also supported.
+- **Format:** PNG recommended. JPG and WebP also supported. SVG is not supported.
 - **Resolution:** At least 300 DPI at print size. For t-shirts, aim for 4500x5400px.
 - **Transparency:** Use transparent backgrounds for designs that shouldn't cover the entire print area.
 - **File size:** Keep under 50MB. Printful rejects files over 200MB.
