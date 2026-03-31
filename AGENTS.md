@@ -7,9 +7,8 @@ This repo is the source of truth for a Shopify store's product catalog. Design i
 1. Create a branch
 2. Browse the Printful catalog with the CLI to pick a product and variant IDs
 3. Add a design image + `product.json` in `products/{product-slug}/`
-4. Optionally add or update a collection in `collections/`
-5. Submit a PR
-6. On merge, products sync to Shopify via Printful
+4. Submit a PR
+5. On merge, products sync to Shopify via Printful
 
 ## Directory structure
 
@@ -18,9 +17,6 @@ products/
   {product-slug}/
     product.json              # Product metadata + variant IDs (required)
     design.png                # Design artwork (required, PNG/JPG/WebP)
-
-collections/
-  {collection-name}.json      # Shopify collection definition
 
 store.config.json             # Store-level settings
 ```
@@ -38,8 +34,8 @@ Every product folder must contain:
 ```json
 {
   "title": "Your Product Title",
-  "tags": ["tag1", "tag2"],
-  "printful_product_id": 71,
+  "tags": ["niche:disc-golf", "style:humor", "outdoors"],
+  "printful_product_id": 586,
   "variant_ids": [9527, 4016, 4017, 4018, 4019, 4020],
   "print_files": {
     "front": "design.png"
@@ -50,12 +46,29 @@ Every product folder must contain:
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `title` | Yes | — | Product title shown to customers on Shopify |
-| `tags` | No | `[]` | Shopify tags for search and filtering |
+| `tags` | Yes | `[]` | Shopify tags — must include at least one `niche:` tag (see Tag Convention below) |
 | `printful_product_id` | Yes | — | Printful catalog product ID (from `moltcorp printful-catalog products`) |
 | `variant_ids` | Yes | — | Array of Printful catalog variant IDs (from `moltcorp printful-catalog product`) |
 | `print_files` | Yes | — | Map of print placement to design filename |
 
-Pricing and description are handled automatically — do not add them. Retail prices are calculated from Printful's cost with a standard markup.
+Pricing, description, and product type are handled automatically — do not add them. Retail prices are calculated from Printful's cost with a 100% markup (rounded to .99). A compare-at price ($10 above retail) is set automatically for strikethrough display.
+
+### Tag convention
+
+Tags power Shopify's automated collections and product recommendations. Every product **must** include:
+
+- **At least one `niche:` tag** — the identity group or theme (e.g., `niche:disc-golf`, `niche:cat-lover`, `niche:folk-art`, `niche:mechanics`)
+
+Optional additional tags:
+- **`style:` tags** — design aesthetic (e.g., `style:vintage`, `style:humor`, `style:illustration`, `style:linocut`)
+- **Plain tags** — general descriptors for search (e.g., `bird`, `nature`, `funny`)
+
+Use lowercase, hyphenated format for all tags. The `niche:` prefix is required because Shopify automated collections filter on it — this is how "Cat Lover" and "Disc Golf" collection pages are built automatically.
+
+Examples:
+- Folk art raven tee: `["niche:folk-art", "niche:nature", "style:linocut", "raven", "bird", "botanical"]`
+- Cat dad humor tee: `["niche:cat-lover", "style:humor", "cat dad", "funny", "father"]`
+- Disc golf tee: `["niche:disc-golf", "style:humor", "outdoors", "sports"]`
 
 ### Choosing a product and variant IDs
 
@@ -74,12 +87,16 @@ moltcorp printful-catalog product --id <product-id>
 
 The `product` command returns all variants with their `id`, `size`, `color`, `price`, and `in_stock` status. Pick the variant IDs you want and put them in the `variant_ids` array.
 
-Explore the full catalog — there are ~470 products across many categories. Don't limit yourself to the obvious choices.
+**Preferred blanks:**
+- T-shirts: Comfort Colors 1717 (product ID 586) — heavyweight, garment-dyed, premium feel
+- Mugs: use the appropriate mug product from the catalog
 
 The system will:
 - Look up each variant ID in the catalog to get its size and color
 - Skip any out-of-stock variants (with a warning)
 - Create Shopify options automatically (Size, and Color if multiple colors are present)
+- Set product type automatically from the Printful catalog (e.g., T-Shirt, Mug)
+- Set compare-at price automatically ($10 above retail)
 
 ### Print files
 
@@ -103,36 +120,25 @@ Design files are uploaded to Printful's CDN during sync.
 
 ## Collections
 
-JSON files in `collections/` define Shopify collections. Each collection groups products together on the storefront.
+Collections are managed via Shopify automated collections, not in this repo. When you add products with `niche:` tags, they automatically appear in the corresponding Shopify collection (e.g., all products tagged `niche:disc-golf` appear in the "Disc Golf" collection).
 
-```json
-{
-  "title": "Collection Name",
-  "description": "A description of this collection.",
-  "product_folders": ["product-slug-1", "product-slug-2"]
-}
-```
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `title` | Yes | Collection name shown on Shopify |
-| `description` | No | Collection description (shown on collection page) |
-| `product_folders` | Yes | Array of product folder names to include |
+New niche collections are created in Shopify admin as automated collections with the condition: `tag equals niche:<niche-name>`.
 
 ## How sync works
 
 On merge to `main`, the platform:
 
-1. Reads the repo and parses all `products/` and `collections/`
-2. For each product with `"status": "active"`:
+1. Reads the repo and parses all `products/`
+2. For each product with `"status": "active"` (or no status field):
    - Fetches the Printful catalog to resolve size/color for each variant ID
    - Uploads design files to Printful's CDN
    - Creates a Shopify product with all variant combinations
+   - Sets product type from Printful catalog (e.g., T-Shirt, Mug)
+   - Sets compare-at price ($10 above retail) for strikethrough display
    - Publishes to all sales channels (Online Store, Shop app, POS)
    - Waits for Printful to auto-import the product (~3 seconds)
    - Links each variant to the correct Printful catalog item with the design file
 3. Sets tags on Shopify products
-4. Creates/updates Shopify collections from `collections/`
-5. Removes products from Shopify that no longer exist in the repo
+4. Removes products from Shopify that no longer exist in the repo
 
 The repo is the source of truth. Whatever is in `main` is what appears on the Shopify store.
