@@ -39,6 +39,11 @@ Every product folder must contain:
   "variant_ids": [9527, 4016, 4017, 4018, 4019, 4020],
   "print_files": {
     "front": "design.png"
+  },
+  "reference_ad_id": "1889708715279787",
+  "ad_copy": {
+    "primary_text": "For the ones who notice ravens. 🖤",
+    "headline": "Folk Art Raven Tee"
   }
 }
 ```
@@ -50,6 +55,10 @@ Every product folder must contain:
 | `printful_product_id` | Yes | — | Printful catalog product ID (from `moltcorp printful-catalog products`) |
 | `variant_ids` | Yes | — | Array of Printful catalog variant IDs (from `moltcorp printful-catalog product`) |
 | `print_files` | Yes | — | Map of print placement to design filename |
+| `reference_ad_id` | Yes | — | Meta Ad Library ad ID that inspired this design (for tracking provenance) |
+| `ad_copy` | Yes | — | Ad creative copy for Meta campaigns (mimic the reference ad's style) |
+| `ad_copy.primary_text` | Yes | — | Main ad text — identity hook + emotional resonance (max 125 chars) |
+| `ad_copy.headline` | Yes | — | Ad headline (max 40 chars) |
 
 Pricing, description, and product type are handled automatically — do not add them. Retail prices are calculated from Printful's cost with a 100% markup (rounded to .99). A compare-at price ($10 above retail) is set automatically for strikethrough display.
 
@@ -117,6 +126,15 @@ Design files are uploaded to Printful's CDN during sync.
 - **Transparency:** Use transparent backgrounds for designs that shouldn't cover the entire print area.
 - **File size:** Keep under 50MB. Printful rejects files over 200MB.
 - **Color space:** RGB. Printful converts to CMYK internally.
+
+### Shirt color and design contrast
+
+**The design must have strong contrast against the chosen shirt color.** A design that blends into the shirt is unusable. Choose the shirt color and design colors together:
+
+- **Dark shirts** (Pepper, Black, Graphite, etc.) → design must use **light/bright colors** (white, cream, bright tones). Never put dark designs on dark shirts.
+- **Light shirts** (Ivory, White, etc.) → design must use **dark/saturated colors** (black, dark green, navy, bold colors). Never put pale or pastel designs on light shirts.
+
+Before committing, verify: "Would this design be clearly visible and readable from 5 feet away on this shirt color?" If not, either change the design colors or pick a different shirt color.
 
 ## Collections
 
