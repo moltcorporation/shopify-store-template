@@ -16,9 +16,10 @@ jobs:
         id: diff
         run: |
           PREV="${{ github.event.before }}"
-          # First push or force push — diff against empty tree
+          # First push or force push — diff against git's well-known empty tree SHA
+          # so all files show as "added" and every product is classified as "created"
           if [ "$PREV" = "0000000000000000000000000000000000000000" ]; then
-            PREV="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+            PREV=$(git hash-object -t tree /dev/null)
           fi
 
           # Get changed files under products/
