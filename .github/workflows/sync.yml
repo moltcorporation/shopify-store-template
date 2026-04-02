@@ -8,9 +8,91 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute changed product folders
+        id: diff
+        run: |
+          PREV="${{ github.event.before }}"
+          # First push or force push — diff against empty tree
+          if [ "$PREV" = "0000000000000000000000000000000000000000" ]; then
+            PREV="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+          fi
+
+          # Get changed files under products/
+          CHANGED=$(git diff --name-only "$PREV" "${{ github.sha }}" -- products/ || true)
+          if [ -z "$CHANGED" ]; then
+            echo "changes=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Classify each product folder
+          declare -A folder_types
+          while IFS= read -r file; do
+            folder=$(echo "$file" | cut -d'/' -f2)
+            [ -z "$folder" ] && continue
+            basename=$(basename "$file")
+
+            # Check if file was deleted (doesn't exist on HEAD)
+            if ! git cat-file -e "HEAD:$file" 2>/dev/null; then
+              existing="${folder_types[$folder]:-}"
+              if [ -z "$existing" ] || [ "$existing" = "deleted" ]; then
+                folder_types[$folder]="deleted"
+              fi
+              continue
+            fi
+
+            # Check if file was added (doesn't exist in prev)
+            is_new=false
+            if ! git cat-file -e "$PREV:products/$folder/product.json" 2>/dev/null; then
+              is_new=true
+            fi
+
+            if [ "$is_new" = true ]; then
+              folder_types[$folder]="created"
+            elif [ "$basename" = "product.json" ]; then
+              existing="${folder_types[$folder]:-}"
+              if [ "$existing" = "design" ]; then
+                folder_types[$folder]="both"
+              elif [ "$existing" != "both" ] && [ "$existing" != "created" ]; then
+                folder_types[$folder]="config"
+              fi
+            else
+              existing="${folder_types[$folder]:-}"
+              if [ "$existing" = "config" ]; then
+                folder_types[$folder]="both"
+              elif [ "$existing" != "both" ] && [ "$existing" != "created" ]; then
+                folder_types[$folder]="design"
+              fi
+            fi
+          done <<< "$CHANGED"
+
+          # Check if "deleted" folders are truly deleted (all files removed)
+          # vs just some files removed — if product.json still exists, it's a design change
+          for folder in "${!folder_types[@]}"; do
+            if [ "${folder_types[$folder]}" = "deleted" ]; then
+              if git cat-file -e "HEAD:products/$folder/product.json" 2>/dev/null; then
+                folder_types[$folder]="design"
+              fi
+            fi
+          done
+
+          # Build JSON array
+          JSON="["
+          first=true
+          for folder in "${!folder_types[@]}"; do
+            if [ "$first" = true ]; then first=false; else JSON+=","; fi
+            JSON+="{\"folder\":\"$folder\",\"type\":\"${folder_types[$folder]}\"}"
+          done
+          JSON+="]"
+
+          echo "changes=$JSON" >> "$GITHUB_OUTPUT"
+
       - name: Notify platform to sync
         run: |
           curl -s -X POST "${{ secrets.SYNC_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.SYNC_WEBHOOK_SECRET }}" \
             -H "Content-Type: application/json" \
-            -d "{\"repo_id\": ${{ github.event.repository.id }}, \"repo_name\": \"${{ github.event.repository.name }}\", \"sha\": \"${{ github.sha }}\"}"
+            -d "{\"repo_id\": ${{ github.event.repository.id }}, \"repo_name\": \"${{ github.event.repository.name }}\", \"sha\": \"${{ github.sha }}\", \"changes\": ${{ steps.diff.outputs.changes }}}"
